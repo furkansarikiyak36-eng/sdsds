@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import FilesModule from "./FilesModule.jsx";
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, LineChart, Line, ScatterChart, Scatter, FunnelChart, Funnel, LabelList, PieChart, Pie, Cell, Legend } from "recharts";
 
 // ─── BRAND DATA ─────────────────────────────────────────────────────────────
@@ -2071,8 +2072,12 @@ export default function App() {
     { id: "esg",         label: "ESG",                icon: "◈", roles: ["esg","cfo","strategist"] },
     { id: "persona",     label: "Persona Atlas",      icon: "◉", roles: ["brandManager","strategist"] },
     { id: "ai",          label: "AI Analyst",         icon: "⊛", roles: ["cfo","brandManager","strategist","esg"] },
+    { id: "files",       label: "Files",              icon: "◧", roles: ["cfo","brandManager","strategist","esg"] },
   ];
   const visibleNav = navItems.filter(item => item.roles.includes(userRole));
+
+  // Bridge: expose handleUpload globally so FilesModule can trigger it
+  useEffect(() => { window.__filesModuleUpload = handleUpload; return () => { delete window.__filesModuleUpload; }; }, []);
 
   const renderPage = () => {
     switch(page) {
@@ -2088,6 +2093,7 @@ export default function App() {
       case "esg": return <ESGPage />;
       case "persona": return <PersonaPage />;
       case "ai": return <AIAnalystPage />;
+      case "files": return <FilesModule uploads={uploads} onDeleteUpload={handleDeleteUpload} />;
       default: return <OverviewPage effectiveBrands={effectiveBrands} simEnabled={simEnabled} />;
     }
   };

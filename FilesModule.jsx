@@ -1,152 +1,416 @@
-import { useState, useRef, useEffect } from "react";
+// ─── FILES MODULE — Integrated Dark Theme Edition ─────────────────────────────
+// Drop-in replacement for FilesModule.jsx. Matches App.jsx dark palette exactly.
+// Props:
+//   uploads       – array of upload objects from App state (shared with OverviewPage)
+//   onDeleteUpload – (id) => void
+// ─────────────────────────────────────────────────────────────────────────────
+
+import { useState, useRef } from "react";
+
+// ── STATIC DATA ───────────────────────────────────────────────────────────────
+
+const BRAND_LIST = [
+  "All Brands",
+  "Global",
+  "Dove",
+  "Omo/Persil",
+  "Lux",
+  "Sunsilk",
+  "Knorr",
+  "Hellmann's",
+  "Lipton",
+  "Rexona/Sure",
+  "TRESemmé",
+  "Axe/Lynx",
+  "Vaseline",
+  "Pond's",
+  "Simple",
+  "Nutrafol",
+  "Lifebuoy",
+  "Closeup",
+  "Signal/Pepsodent",
+  "Cif",
+  "Domestos",
+  "Comfort",
+  "Surf Excel",
+  "Magnum",
+  "Ben & Jerry's",
+  "Maille",
+  "Pukka",
+  "Brooke Bond",
+  "Horlicks",
+  "Degree/Sure",
+  "Dermalogica",
+  "Liquid I.V.",
+];
 
 const DEPARTMENTS = ["All", "Creative", "Reports", "UI/UX", "Insights", "Diagrams"];
 
-const BRANDS = [
-  "Global",
-  "Dove",
-  "Hellmann's",
-  "Ben & Jerry's",
-  "Knorr",
-  "TRESemmé",
-  "Vaseline",
-  "Lifebuoy",
-  "Nutrafol",
-  "Liquid I.V.",
-  "REN",
-  "Kate Somerville",
-];
-
 const DEPT_COLORS = {
-  Creative:  { bg: "#AFA9EC22", border: "#7F77DD", text: "#3C3489" },
-  Reports:   { bg: "#5DCAA522", border: "#1D9E75", text: "#085041" },
-  "UI/UX":   { bg: "#F0997B22", border: "#D85A30", text: "#712B13" },
-  Insights:  { bg: "#FAC77522", border: "#BA7517", text: "#633806" },
-  Diagrams:  { bg: "#85B7EB22", border: "#378ADD", text: "#0C447C" },
+  Creative:  { accent: "#818CF8", bg: "rgba(129,140,248,0.08)", border: "rgba(129,140,248,0.25)" },
+  Reports:   { accent: "#34D399", bg: "rgba(52,211,153,0.08)",  border: "rgba(52,211,153,0.25)"  },
+  "UI/UX":   { accent: "#F472B6", bg: "rgba(244,114,182,0.08)", border: "rgba(244,114,182,0.25)" },
+  Insights:  { accent: "#FBBF24", bg: "rgba(251,191,36,0.08)",  border: "rgba(251,191,36,0.25)"  },
+  Diagrams:  { accent: "#06B6D4", bg: "rgba(6,182,212,0.08)",   border: "rgba(6,182,212,0.25)"   },
 };
 
-const STATUS_COLORS = {
-  Final:      { bg: "#C0DD9722", text: "#3B6D11" },
-  Draft:      { bg: "#FAC77522", text: "#633806" },
-  "In Review":{ bg: "#85B7EB22", text: "#0C447C" },
-  Archived:   { bg: "#B4B2A922", text: "#444441" },
+const STATUS_CFG = {
+  Final:       { color: "#34D399", bg: "rgba(52,211,153,0.12)",  label: "Final"     },
+  Draft:       { color: "#FBBF24", bg: "rgba(251,191,36,0.12)",  label: "Draft"     },
+  "In Review": { color: "#60A5FA", bg: "rgba(96,165,250,0.12)",  label: "In Review" },
+  Archived:    { color: "#6B7280", bg: "rgba(107,114,128,0.12)", label: "Archived"  },
 };
 
 const FILE_ICONS = {
-  pdf:   "📄",
-  fig:   "🎨",
-  pptx:  "📊",
-  xlsx:  "📈",
-  docx:  "📝",
-  png:   "🖼",
-  mp4:   "🎬",
-  svg:   "✏️",
+  pdf: "📄", fig: "🎨", pptx: "📊", xlsx: "📈",
+  docx: "📝", png: "🖼", mp4: "🎬", svg: "✏️",
 };
 
-const FILES = [
-  // ── GLOBAL ──
-  { id: 1,  brand: "Global", dept: "Reports",  title: "FY2024 Unilever Annual Report",            ext: "pdf",  status: "Final",     date: "2024-02-14", desc: "Official Unilever FY2024 filing. Source for underlying operating margin 16.1% (not 16.8%), turnover €60.1B.", tags: ["#financials","#source-of-truth"] },
-  { id: 2,  brand: "Global", dept: "Reports",  title: "Competitive Benchmark Matrix Q4 2024",     ext: "xlsx", status: "Final",     date: "2024-12-10", desc: "P&G, Nestlé, Henkel cross-category share and margin comparison.", tags: ["#benchmark","#competitive"] },
-  { id: 3,  brand: "Global", dept: "Diagrams", title: "Gap Analysis → Solution Journey",          ext: "svg",  status: "Final",     date: "2025-01-08", desc: "End-to-end methodology: data collection → anomaly detection → severity scoring → corrective brief.", tags: ["#methodology","#gap-analysis"] },
-  { id: 4,  brand: "Global", dept: "Diagrams", title: "Error Taxonomy & Severity Framework",      ext: "svg",  status: "Final",     date: "2025-01-05", desc: "Classifies dashboard errors into P0/P1/P2 tiers with decision rules for correction vs. removal.", tags: ["#framework","#methodology"] },
-  { id: 5,  brand: "Global", dept: "Insights", title: "Portfolio ESG Scorecard 2024",             ext: "pdf",  status: "Final",     date: "2024-11-20", desc: "Compass KPI progress: plastic reduction, deforestation, living wages across 400 brands.", tags: ["#ESG","#compass"] },
-  { id: 6,  brand: "Global", dept: "UI/UX",    title: "Dashboard Design System v2",               ext: "fig",  status: "Final",     date: "2025-01-15", desc: "Figma component library: color tokens, severity badges, chart patterns, brand card specs.", tags: ["#design-system","#figma"] },
-  { id: 7,  brand: "Global", dept: "Creative", title: "Brand Portfolio Map Visual",               ext: "svg",  status: "Draft",     date: "2025-02-01", desc: "2×2 matrix plotting all 30 Power Brands by growth rate vs. margin contribution.", tags: ["#portfolio","#visualization"] },
-  { id: 8,  brand: "Global", dept: "Reports",  title: "Divested & Discontinued Brands Register",  ext: "xlsx", status: "Final",     date: "2024-10-05", desc: "Lipton (→CVC 2022), Dollar Shave Club, Elida Beauty. Reference for portfolio cleanup.", tags: ["#divestitures","#source-of-truth"] },
-
-  // ── DOVE ──
-  { id: 9,  brand: "Dove",   dept: "Creative", title: "Real Beauty Campaign Brief 2025",          ext: "pdf",  status: "Final",     date: "2025-01-20", desc: "Campaign strategy, tone of voice, asset specs for Q1-Q2 global rollout.", tags: ["#campaign","#creative-brief"] },
-  { id: 10, brand: "Dove",   dept: "Insights", title: "Consumer Sentiment Deep Dive",             ext: "pptx", status: "Final",     date: "2024-11-12", desc: "NPS trends, social listening (700K+ mentions), Şikayetvar/Ekşi aggregation TR market.", tags: ["#consumer","#NLP"] },
-  { id: 11, brand: "Dove",   dept: "UI/UX",    title: "Dove.com Redesign Prototype",              ext: "fig",  status: "In Review", date: "2025-02-10", desc: "Mobile-first redesign. Accessibility audit passed AA. Handoff ready pending stakeholder sign-off.", tags: ["#redesign","#mobile"] },
-  { id: 12, brand: "Dove",   dept: "Diagrams", title: "Dove Revenue Attribution Flow",            ext: "svg",  status: "Final",     date: "2024-12-20", desc: "How segment-level revenue rolls up to reported Beauty & Wellbeing figure. Corrects 16.8% → 16.1% margin.", tags: ["#financials","#correction"] },
-
-  // ── BEN & JERRY'S ──
-  { id: 13, brand: "Ben & Jerry's", dept: "Insights",  title: "Activism Risk & Brand Trust Study",   ext: "pdf",  status: "Final",     date: "2024-09-15", desc: "Quantifies impact of political activism on purchase intent across 6 markets.", tags: ["#risk","#brand-trust"] },
-  { id: 14, brand: "Ben & Jerry's", dept: "Creative",  title: "Limited Edition Flavor Roadmap 2025", ext: "pptx", status: "Draft",     date: "2025-01-30", desc: "Pipeline of 8 flavors tied to social campaigns. Links to influencer brief.", tags: ["#NPD","#campaign"] },
-  { id: 15, brand: "Ben & Jerry's", dept: "Diagrams",  title: "Governance Tension Decision Tree",    ext: "svg",  status: "Final",     date: "2024-10-10", desc: "Maps Unilever/Vermont-board conflicts to resolution pathways and brand risk scenarios.", tags: ["#governance","#risk"] },
-
-  // ── KNORR ──
-  { id: 16, brand: "Knorr",  dept: "Reports",  title: "Future Foods Market Analysis",             ext: "pdf",  status: "Final",     date: "2024-08-20", desc: "Plant-based & functional food segment sizing. USG driver decomposition.", tags: ["#market-analysis","#NPD"] },
-  { id: 17, brand: "Knorr",  dept: "Creative", title: "Knorr Rebrand Visual Identity",            ext: "fig",  status: "In Review", date: "2025-02-05", desc: "Logo evolution, packaging system, typography. Pending global market approval.", tags: ["#rebrand","#identity"] },
-
-  // ── LIFEBUOY ──
-  { id: 18, brand: "Lifebuoy", dept: "Reports", title: "Lifebuoy Stagnation Diagnostic",          ext: "pdf",  status: "Final",     date: "2024-12-01", desc: "Explains 0% USG vs. listed 6.8%. Root causes: commodity inflation, distribution gaps in SEA.", tags: ["#correction","#diagnostic"] },
-  { id: 19, brand: "Lifebuoy", dept: "Diagrams", title: "Watch-List Entry Rationale",              ext: "svg",  status: "Final",     date: "2024-12-05", desc: "Decision diagram: why Lifebuoy moves from Strong → Watch. Evidence chain from quarterly data.", tags: ["#correction","#evidence"] },
-
-  // ── NUTRAFOL / LIQUID I.V. ──
-  { id: 20, brand: "Nutrafol",    dept: "Insights", title: "Prestige Hair Wellness Category Map",  ext: "pptx", status: "Final",     date: "2024-10-18", desc: "Category sizing, target consumer, claim substantiation. Note: double-digit growth confirmed, exact % undisclosed.", tags: ["#category","#disclaimer"] },
-  { id: 21, brand: "Liquid I.V.", dept: "Reports",  title: "Hydration Segment Competitive Scan",  ext: "pdf",  status: "Final",     date: "2024-09-28", desc: "LMNT, Nuun, DripDrop comparison. Growth narrative verified from Unilever investor day; specific % not disclosed.", tags: ["#competitive","#disclaimer"] },
-
-  // ── REN / KATE SOMERVILLE ──
-  { id: 22, brand: "REN",            dept: "Reports",  title: "REN Closure Decision Brief",        ext: "pdf",  status: "Final",     date: "2025-01-10", desc: "Internal rationale: margin compression, crowded prestige skincare, Unilever portfolio simplification.", tags: ["#divested","#closure"] },
-  { id: 23, brand: "Kate Somerville",dept: "Reports",  title: "Kate Somerville Sale Process Note", ext: "pdf",  status: "Final",     date: "2025-01-10", desc: "Asset marked for divestiture. Dashboard must reflect status: 'For Sale', not active.", tags: ["#divested","#correction"] },
+const STATIC_FILES = [
+  // ── GLOBAL ──────────────────────────────────────────────────────────────────
+  { id: 1,  brand: "Global",       dept: "Reports",  title: "FY2024 Unilever Annual Report",         ext: "pdf",  status: "Final",     date: "2024-02-14", desc: "Official FY2024 filing. Source for underlying operating margin 16.1%, turnover €60.1B.", tags: ["#financials","#source-of-truth"] },
+  { id: 2,  brand: "Global",       dept: "Reports",  title: "Competitive Benchmark Matrix Q4 2024",  ext: "xlsx", status: "Final",     date: "2024-12-10", desc: "P&G, Nestlé, Henkel cross-category share and margin comparison.", tags: ["#benchmark","#competitive"] },
+  { id: 3,  brand: "Global",       dept: "Diagrams", title: "Gap Analysis → Solution Journey",       ext: "svg",  status: "Final",     date: "2025-01-08", desc: "End-to-end methodology: data collection → anomaly detection → severity scoring → corrective brief.", tags: ["#methodology","#gap-analysis"] },
+  { id: 4,  brand: "Global",       dept: "Diagrams", title: "Error Taxonomy & Severity Framework",   ext: "svg",  status: "Final",     date: "2025-01-05", desc: "Classifies dashboard errors into P0/P1/P2 tiers with decision rules for correction vs. removal.", tags: ["#framework","#methodology"] },
+  { id: 5,  brand: "Global",       dept: "Insights", title: "Portfolio ESG Scorecard 2024",          ext: "pdf",  status: "Final",     date: "2024-11-20", desc: "Compass KPI progress: plastic reduction, deforestation, living wages across 400 brands.", tags: ["#ESG","#compass"] },
+  { id: 6,  brand: "Global",       dept: "UI/UX",    title: "Dashboard Design System v2",            ext: "fig",  status: "Final",     date: "2025-01-15", desc: "Figma component library: color tokens, severity badges, chart patterns, brand card specs.", tags: ["#design-system","#figma"] },
+  { id: 7,  brand: "Global",       dept: "Creative", title: "Brand Portfolio Map Visual",            ext: "svg",  status: "Draft",     date: "2025-02-01", desc: "2×2 matrix plotting all 30 Power Brands by growth rate vs. margin contribution.", tags: ["#portfolio","#visualization"] },
+  { id: 8,  brand: "Global",       dept: "Reports",  title: "Divested & Discontinued Brands Register",ext:"xlsx",  status: "Final",     date: "2024-10-05", desc: "Lipton (→CVC 2022), Dollar Shave Club, Elida Beauty. Reference for portfolio cleanup.", tags: ["#divestitures","#source-of-truth"] },
+  // ── DOVE ────────────────────────────────────────────────────────────────────
+  { id: 9,  brand: "Dove",         dept: "Creative", title: "Real Beauty Campaign Brief 2025",       ext: "pdf",  status: "Final",     date: "2025-01-20", desc: "Campaign strategy, tone of voice, asset specs for Q1–Q2 global rollout.", tags: ["#campaign","#creative-brief"] },
+  { id: 10, brand: "Dove",         dept: "Insights", title: "Consumer Sentiment Deep Dive",          ext: "pptx", status: "Final",     date: "2024-11-12", desc: "NPS trends, social listening 700K+ mentions, Şikayetvar/Ekşi aggregation TR market.", tags: ["#consumer","#NLP"] },
+  { id: 11, brand: "Dove",         dept: "UI/UX",    title: "Dove.com Redesign Prototype",           ext: "fig",  status: "In Review", date: "2025-02-10", desc: "Mobile-first redesign. Accessibility audit AA passed. Handoff ready pending stakeholder sign-off.", tags: ["#redesign","#mobile"] },
+  { id: 12, brand: "Dove",         dept: "Diagrams", title: "Dove Revenue Attribution Flow",         ext: "svg",  status: "Final",     date: "2024-12-20", desc: "Segment-level revenue rollup to Beauty & Wellbeing. Corrects 16.8% → 16.1% margin.", tags: ["#financials","#correction"] },
+  // ── BEN & JERRY'S ──────────────────────────────────────────────────────────
+  { id: 13, brand: "Ben & Jerry's", dept: "Insights", title: "Activism Risk & Brand Trust Study",    ext: "pdf",  status: "Final",     date: "2024-09-15", desc: "Quantifies impact of political activism on purchase intent across 6 markets.", tags: ["#risk","#brand-trust"] },
+  { id: 14, brand: "Ben & Jerry's", dept: "Creative", title: "Limited Edition Flavor Roadmap 2025",  ext: "pptx", status: "Draft",     date: "2025-01-30", desc: "Pipeline of 8 flavors tied to social campaigns. Links to influencer brief.", tags: ["#NPD","#campaign"] },
+  { id: 15, brand: "Ben & Jerry's", dept: "Diagrams", title: "Governance Tension Decision Tree",     ext: "svg",  status: "Final",     date: "2024-10-10", desc: "Maps Unilever/Vermont-board conflicts to resolution pathways and brand risk scenarios.", tags: ["#governance","#risk"] },
+  // ── KNORR ───────────────────────────────────────────────────────────────────
+  { id: 16, brand: "Knorr",         dept: "Reports",  title: "Future Foods Market Analysis",         ext: "pdf",  status: "Final",     date: "2024-08-20", desc: "Plant-based & functional food segment sizing. USG driver decomposition.", tags: ["#market-analysis","#NPD"] },
+  { id: 17, brand: "Knorr",         dept: "Creative", title: "Knorr Rebrand Visual Identity",        ext: "fig",  status: "In Review", date: "2025-02-05", desc: "Logo evolution, packaging system, typography. Pending global market approval.", tags: ["#rebrand","#identity"] },
+  // ── LIFEBUOY ────────────────────────────────────────────────────────────────
+  { id: 18, brand: "Lifebuoy",      dept: "Reports",  title: "Lifebuoy Stagnation Diagnostic",      ext: "pdf",  status: "Final",     date: "2024-12-01", desc: "Explains USG data anomaly. Root causes: commodity inflation, distribution gaps in SEA.", tags: ["#correction","#diagnostic"] },
+  { id: 19, brand: "Lifebuoy",      dept: "Diagrams", title: "Watch-List Entry Rationale",          ext: "svg",  status: "Final",     date: "2024-12-05", desc: "Decision diagram: why Lifebuoy risk status was escalated. Evidence chain from quarterly data.", tags: ["#correction","#evidence"] },
+  // ── NUTRAFOL ─────────────────────────────────────────────────────────────────
+  { id: 20, brand: "Nutrafol",      dept: "Insights", title: "Prestige Hair Wellness Category Map",  ext: "pptx", status: "Final",     date: "2024-10-18", desc: "Category sizing, target consumer, claim substantiation. Double-digit growth confirmed.", tags: ["#category","#disclaimer"] },
+  // ── LIQUID I.V. ──────────────────────────────────────────────────────────────
+  { id: 21, brand: "Liquid I.V.",   dept: "Reports",  title: "Hydration Segment Competitive Scan",  ext: "pdf",  status: "Final",     date: "2024-09-28", desc: "LMNT, Nuun, DripDrop comparison. Growth narrative verified from Unilever investor day.", tags: ["#competitive","#disclaimer"] },
+  // ── HELLMANN'S ───────────────────────────────────────────────────────────────
+  { id: 22, brand: "Hellmann's",    dept: "Creative", title: "Plant-Based Mayo Launch Brief",        ext: "pdf",  status: "Draft",     date: "2025-02-15", desc: "Creative brief for Hellmann's Vegan range expansion into 15 new markets Q2 2025.", tags: ["#NPD","#campaign"] },
+  // ── MAGNUM ────────────────────────────────────────────────────────────────────
+  { id: 23, brand: "Magnum",        dept: "Creative", title: "Magnum X Luxury Collab Brief",         ext: "pptx", status: "Draft",     date: "2025-01-25", desc: "Limited edition fashion collaboration. Targets premium indulgence segment and Gen Z.", tags: ["#campaign","#premium"] },
+  // ── PUKKA ─────────────────────────────────────────────────────────────────────
+  { id: 24, brand: "Pukka",         dept: "Reports",  title: "US Market Entry Assessment",           ext: "pdf",  status: "In Review", date: "2025-02-08", desc: "Whole Foods, Target channel analysis. DTC subscription model feasibility for US launch.", tags: ["#market-entry","#DTC"] },
+  // ── DERMALOGICA ───────────────────────────────────────────────────────────────
+  { id: 25, brand: "Dermalogica",   dept: "Diagrams", title: "Clinical Channel Expansion Map",       ext: "svg",  status: "Final",     date: "2024-11-30", desc: "ME and Asia clinic footprint plan. AI skin diagnostic integration pathway.", tags: ["#expansion","#clinical"] },
 ];
 
 const JOURNEY_STEPS = [
-  {
-    id: "J1",
-    phase: "Discovery",
-    color: "#7F77DD",
-    bg: "#EEEDFE",
-    border: "#AFA9EC",
-    title: "Data Collection",
-    actions: ["FY2024 Annual Report ingested", "Competitor filings pulled", "Ekşi/Şikayetvar NLP run"],
-  },
-  {
-    id: "J2",
-    phase: "Analysis",
-    color: "#1D9E75",
-    bg: "#E1F5EE",
-    border: "#5DCAA5",
-    title: "Anomaly Detection",
-    actions: ["Revenue figure cross-check", "Portfolio status verification", "USG outlier flagging"],
-  },
-  {
-    id: "J3",
-    phase: "Validation",
-    color: "#BA7517",
-    bg: "#FAEEDA",
-    border: "#FAC775",
-    title: "Severity Scoring",
-    actions: ["P0: factual financial errors", "P1: misleading status data", "P2: undisclosed assumptions"],
-  },
-  {
-    id: "J4",
-    phase: "Resolution",
-    color: "#D85A30",
-    bg: "#FAECE7",
-    border: "#F0997B",
-    title: "Corrective Briefs",
-    actions: ["5 critical fixes documented", "Lipton removed from active", "EBIT 16.8% → 16.1%"],
-  },
-  {
-    id: "J5",
-    phase: "Delivery",
-    color: "#378ADD",
-    bg: "#E6F1FB",
-    border: "#85B7EB",
-    title: "Dashboard Update",
-    actions: ["Files module added", "AI Analyst wired to live data", "Evidence chain linked"],
-  },
+  { id: "J1", phase: "Discovery",  color: "#818CF8", title: "Data Collection",    actions: ["FY2024 Annual Report ingested", "Competitor filings pulled", "30-brand dataset compiled"] },
+  { id: "J2", phase: "Analysis",   color: "#34D399", title: "Anomaly Detection",  actions: ["Revenue figure cross-check", "Portfolio status verification", "USG outlier flagging"] },
+  { id: "J3", phase: "Validation", color: "#FBBF24", title: "Severity Scoring",   actions: ["P0: factual financial errors", "P1: misleading status data", "P2: undisclosed assumptions"] },
+  { id: "J4", phase: "Resolution", color: "#F87171", title: "Corrective Briefs",  actions: ["5 critical fixes documented", "EBIT 16.8% → 16.1% corrected", "Evidence chain built"] },
+  { id: "J5", phase: "Delivery",   color: "#06B6D4", title: "Platform Update",    actions: ["Files module integrated", "Analytics Engine wired", "Upload system linked"] },
 ];
 
-export default function FilesModule() {
-  const [activeBrand, setActiveBrand] = useState("Global");
-  const [activeDept, setActiveDept] = useState("All");
-  const [search, setSearch] = useState("");
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+
+const fmtSize = (bytes) =>
+  bytes > 1048576 ? (bytes / 1048576).toFixed(1) + " MB" : (bytes / 1024).toFixed(0) + " KB";
+
+const detectFileType = (name) => {
+  const ext = name.split(".").pop().toLowerCase();
+  const MAP = {
+    pdf: "pdf", doc: "docx", docx: "docx", ppt: "pptx", pptx: "pptx",
+    xlsx: "xlsx", xls: "xlsx", csv: "xlsx", fig: "fig", svg: "svg",
+    png: "png", jpg: "png", jpeg: "png", gif: "png", webp: "png",
+    mp4: "mp4", mov: "mp4", webm: "mp4",
+  };
+  return MAP[ext] || "pdf";
+};
+
+const UPLOAD_DEPT_MAP = { pdf: "Reports", docx: "Reports", xlsx: "Reports", pptx: "Insights", fig: "UI/UX", png: "Creative", mp4: "Creative", svg: "Diagrams" };
+
+// ── BADGE ─────────────────────────────────────────────────────────────────────
+
+const DarkBadge = ({ text, color, bg }) => (
+  <span style={{
+    background: bg || `${color}18`,
+    color,
+    border: `1px solid ${color}33`,
+    borderRadius: 5,
+    padding: "2px 7px",
+    fontSize: 10,
+    fontWeight: 600,
+    whiteSpace: "nowrap",
+  }}>{text}</span>
+);
+
+// ── FILE CARD ─────────────────────────────────────────────────────────────────
+
+function FileCard({ file, dc, isSelected, onSelect }) {
+  const sc = STATUS_CFG[file.status] || STATUS_CFG["Draft"];
+  const isUpload = !!file._upload;
+
+  return (
+    <div
+      onClick={() => onSelect(isSelected ? null : file)}
+      style={{
+        background: isSelected ? dc.bg : "rgba(255,255,255,0.03)",
+        border: `1px solid ${isSelected ? dc.accent : "rgba(255,255,255,0.07)"}`,
+        borderLeft: `3px solid ${isSelected ? dc.accent : "transparent"}`,
+        borderRadius: 12,
+        padding: "12px 14px",
+        cursor: "pointer",
+        transition: "all 0.15s",
+      }}
+    >
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
+        <span style={{ fontSize: 20 }}>{FILE_ICONS[file.ext] || "📎"}</span>
+        <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+          {isUpload && (
+            <span style={{ fontSize: 9, color: "#34D399", background: "rgba(52,211,153,0.12)", border: "1px solid rgba(52,211,153,0.25)", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>UPLOADED</span>
+          )}
+          <DarkBadge text={sc.label} color={sc.color} />
+        </div>
+      </div>
+      <p style={{ fontSize: 12, fontWeight: 600, color: "#F9FAFB", margin: "0 0 4px", lineHeight: 1.4 }}>{file.title}</p>
+      <p style={{ fontSize: 11, color: "#6B7280", margin: "0 0 8px", lineHeight: 1.5 }}>
+        {file.desc.substring(0, 80)}{file.desc.length > 80 ? "…" : ""}
+      </p>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 3, marginBottom: 8 }}>
+        {file.tags.map(t => (
+          <span key={t} style={{ fontSize: 10, padding: "1px 6px", background: dc.bg, color: dc.accent, border: `1px solid ${dc.border}`, borderRadius: 4 }}>{t}</span>
+        ))}
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span style={{ fontSize: 10, color: "#4B5563", fontFamily: "'IBM Plex Mono', monospace" }}>.{file.ext}{file.size ? ` · ${fmtSize(file.size)}` : ""}</span>
+        <span style={{ fontSize: 10, color: "#4B5563" }}>{file.date}</span>
+      </div>
+    </div>
+  );
+}
+
+// ── DEPT SECTION ──────────────────────────────────────────────────────────────
+
+function DeptSection({ dept, items, selectedFile, onSelect }) {
+  const dc = DEPT_COLORS[dept];
+  if (!items || items.length === 0) return null;
+  return (
+    <div style={{ marginBottom: 24 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+        <div style={{ width: 8, height: 8, borderRadius: "50%", background: dc.accent }} />
+        <span style={{ fontSize: 12, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.08em" }}>{dept}</span>
+        <span style={{ fontSize: 11, color: "#4B5563" }}>{items.length} file{items.length !== 1 ? "s" : ""}</span>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 10 }}>
+        {items.map(f => (
+          <FileCard key={f.id} file={f} dc={dc} isSelected={selectedFile?.id === f.id} onSelect={onSelect} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── FILE DETAIL PANEL ─────────────────────────────────────────────────────────
+
+function FileDetail({ file, onClose, onDeleteUpload }) {
+  const dc = DEPT_COLORS[file.dept] || DEPT_COLORS["Reports"];
+  const sc = STATUS_CFG[file.status] || STATUS_CFG["Draft"];
+  const isUpload = !!file._upload;
+
+  return (
+    <div style={{
+      background: "rgba(255,255,255,0.03)",
+      border: `1.5px solid ${dc.accent}55`,
+      borderRadius: 14,
+      padding: 24,
+      marginTop: 20,
+    }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+          <span style={{ fontSize: 32 }}>{FILE_ICONS[file.ext] || "📎"}</span>
+          <div>
+            <p style={{ fontSize: 16, fontWeight: 700, color: "#F9FAFB", margin: "0 0 4px" }}>{file.title}</p>
+            <p style={{ fontSize: 12, color: "#6B7280", margin: 0 }}>{file.brand} · {file.dept} · {file.date}</p>
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 6 }}>
+          {isUpload && onDeleteUpload && (
+            <button
+              onClick={() => { onDeleteUpload(file._upload.id); onClose(); }}
+              style={{ fontSize: 11, color: "#F87171", background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.25)", borderRadius: 7, padding: "5px 12px", cursor: "pointer" }}
+            >× Remove</button>
+          )}
+          <button
+            onClick={onClose}
+            style={{ fontSize: 11, color: "#9CA3AF", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, padding: "5px 12px", cursor: "pointer" }}
+          >Close</button>
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+        <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: 14, border: "1px solid rgba(255,255,255,0.06)" }}>
+          <p style={{ fontSize: 11, fontWeight: 700, color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 6px" }}>Description</p>
+          <p style={{ fontSize: 13, color: "#D1D5DB", margin: 0, lineHeight: 1.7 }}>{file.desc}</p>
+        </div>
+        <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: 14, border: "1px solid rgba(255,255,255,0.06)" }}>
+          <p style={{ fontSize: 11, fontWeight: 700, color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 10px" }}>Metadata</p>
+          {[
+            ["Department", <DarkBadge key="dept" text={file.dept} color={dc.accent} />],
+            ["Status",     <DarkBadge key="status" text={sc.label} color={sc.color} />],
+            ["Brand",      <span key="brand" style={{ fontSize: 12, color: "#D1D5DB" }}>{file.brand}</span>],
+            ["Format",     <span key="fmt" style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: "#9CA3AF" }}>.{file.ext}</span>],
+            ...(file.size ? [["Size", <span key="size" style={{ fontSize: 12, color: "#9CA3AF" }}>{fmtSize(file.size)}</span>]] : []),
+          ].map(([label, val], i) => (
+            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6, fontSize: 12 }}>
+              <span style={{ color: "#6B7280" }}>{label}</span>
+              <span>{val}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ marginBottom: 16 }}>
+        <p style={{ fontSize: 11, fontWeight: 700, color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 8px" }}>Tags</p>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+          {file.tags.map(t => (
+            <DarkBadge key={t} text={t} color={dc.accent} />
+          ))}
+        </div>
+      </div>
+
+      {/* Preview for uploaded images */}
+      {isUpload && file._upload.type === "image" && (
+        <div style={{ marginBottom: 14 }}>
+          <p style={{ fontSize: 11, fontWeight: 700, color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 8px" }}>Preview</p>
+          <img src={file._upload.url} alt={file.title} style={{ maxWidth: "100%", maxHeight: 200, borderRadius: 8, border: "1px solid rgba(255,255,255,0.07)", objectFit: "cover" }} />
+        </div>
+      )}
+      {isUpload && file._upload.type === "video" && (
+        <div style={{ marginBottom: 14 }}>
+          <p style={{ fontSize: 11, fontWeight: 700, color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 8px" }}>Preview</p>
+          <video src={file._upload.url} controls style={{ width: "100%", maxHeight: 200, borderRadius: 8, background: "#000" }} />
+        </div>
+      )}
+
+      <div style={{ display: "flex", gap: 8 }}>
+        {isUpload ? (
+          <a href={file._upload.url} download={file.title} style={{ fontSize: 11, color: dc.accent, background: dc.bg, border: `1px solid ${dc.border}`, borderRadius: 7, padding: "5px 12px", textDecoration: "none", cursor: "pointer" }}>
+            ↓ Download
+          </a>
+        ) : (
+          <button style={{ fontSize: 11, color: dc.accent, background: dc.bg, border: `1px solid ${dc.border}`, borderRadius: 7, padding: "5px 12px", cursor: "pointer" }}>
+            ↓ Download .{file.ext}
+          </button>
+        )}
+        <button style={{ fontSize: 11, color: "#9CA3AF", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, padding: "5px 12px", cursor: "pointer" }}>
+          Share link
+        </button>
+        <button style={{ fontSize: 11, color: "#9CA3AF", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, padding: "5px 12px", cursor: "pointer" }}>
+          Open in viewer
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── JOURNEY PANEL ─────────────────────────────────────────────────────────────
+
+function JourneyPanel() {
+  return (
+    <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: 20, marginBottom: 20 }}>
+      <p style={{ fontSize: 13, fontWeight: 700, color: "#F9FAFB", margin: "0 0 2px" }}>Solution Journey</p>
+      <p style={{ fontSize: 12, color: "#6B7280", margin: "0 0 16px" }}>From raw data to corrective dashboard — methodology chain</p>
+      <div style={{ display: "flex", alignItems: "stretch", gap: 0, overflowX: "auto", paddingBottom: 4 }}>
+        {JOURNEY_STEPS.map((step, i) => (
+          <div key={step.id} style={{ display: "flex", alignItems: "center", flex: 1, minWidth: 140 }}>
+            <div style={{ flex: 1, background: `${step.color}0d`, border: `1px solid ${step.color}33`, borderRadius: 10, padding: "12px 14px", minHeight: 110 }}>
+              <div style={{ marginBottom: 6 }}>
+                <span style={{ fontSize: 9, fontWeight: 700, background: step.color, color: "#0D1117", padding: "2px 7px", borderRadius: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>{step.phase}</span>
+              </div>
+              <p style={{ fontSize: 12, fontWeight: 700, color: step.color, margin: "0 0 8px" }}>{step.title}</p>
+              {step.actions.map((a, ai) => (
+                <p key={ai} style={{ fontSize: 11, color: "#6B7280", margin: "2px 0", lineHeight: 1.4 }}>— {a}</p>
+              ))}
+            </div>
+            {i < JOURNEY_STEPS.length - 1 && (
+              <div style={{ width: 24, textAlign: "center", fontSize: 14, color: "#374151", flexShrink: 0 }}>→</div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── STATS BAR ─────────────────────────────────────────────────────────────────
+
+function StatsBar({ allFiles }) {
+  const byDept = {};
+  const byStatus = {};
+  allFiles.forEach(f => {
+    byDept[f.dept] = (byDept[f.dept] || 0) + 1;
+    byStatus[f.status] = (byStatus[f.status] || 0) + 1;
+  });
+  const topDept = Object.entries(byDept).sort((a,b)=>b[1]-a[1])[0];
+  return (
+    <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
+      {[
+        { label: "Total Files",     value: allFiles.length,              color: "#60A5FA" },
+        { label: "Final",           value: byStatus["Final"] || 0,       color: "#34D399" },
+        { label: "In Review",       value: byStatus["In Review"] || 0,   color: "#60A5FA" },
+        { label: "Draft",           value: byStatus["Draft"] || 0,       color: "#FBBF24" },
+        { label: "Top Dept",        value: topDept?.[0] || "—",          color: "#818CF8" },
+      ].map(({ label, value, color }) => (
+        <div key={label} style={{ background: `${color}0d`, border: `1px solid ${color}25`, borderRadius: 10, padding: "10px 16px", flex: "1 1 120px" }}>
+          <div style={{ fontSize: 10, color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{label}</div>
+          <div style={{ fontSize: 18, fontWeight: 800, color, fontFamily: "'IBM Plex Mono', monospace" }}>{value}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── MAIN COMPONENT ────────────────────────────────────────────────────────────
+
+export default function FilesModule({ uploads = [], onDeleteUpload }) {
+  const [activeBrand, setActiveBrand] = useState("All Brands");
+  const [activeDept,  setActiveDept]  = useState("All");
+  const [search,      setSearch]      = useState("");
   const [showJourney, setShowJourney] = useState(false);
-  const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedFile,setSelectedFile]= useState(null);
+  const fileInputRef = useRef(null);
+  const [dragOver,    setDragOver]    = useState(false);
 
-  const fileDetailRef = useRef(null);
+  // Convert App-level uploads to file objects for this module
+  const uploadFiles = uploads.map((u, idx) => {
+    const ext = detectFileType(u.name);
+    return {
+      id: `upload-${u.id}`,
+      brand: "Global",
+      dept: UPLOAD_DEPT_MAP[ext] || "Reports",
+      title: u.name.replace(/\.[^/.]+$/, ""),
+      ext,
+      status: "Draft",
+      date: u.date,
+      desc: `Uploaded file. Size: ${fmtSize(u.size)}.`,
+      tags: ["#uploaded"],
+      size: u.size,
+      _upload: u,
+    };
+  });
 
-  useEffect(() => {
-    if (selectedFile && fileDetailRef.current) {
-      fileDetailRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    }
-  }, [selectedFile]);
-    const matchBrand = activeBrand === "Global" ? true : f.brand === activeBrand || f.brand === "Global";
-    const matchDept = activeDept === "All" || f.dept === activeDept;
-    const matchSearch = search === "" || f.title.toLowerCase().includes(search.toLowerCase()) || f.tags.some(t => t.includes(search.toLowerCase()));
+  const allFiles = [...STATIC_FILES, ...uploadFiles];
+
+  // Filtering
+  const filtered = allFiles.filter(f => {
+    const matchBrand = activeBrand === "All Brands" || f.brand === activeBrand || (activeBrand !== "Global" && f.brand === "Global");
+    const matchDept  = activeDept === "All" || f.dept === activeDept;
+    const matchSearch = search === "" ||
+      f.title.toLowerCase().includes(search.toLowerCase()) ||
+      f.tags.some(t => t.toLowerCase().includes(search.toLowerCase())) ||
+      f.desc.toLowerCase().includes(search.toLowerCase());
     return matchBrand && matchDept && matchSearch;
   });
 
@@ -155,258 +419,182 @@ export default function FilesModule() {
     return acc;
   }, {});
 
-  return (
-    <div style={{ fontFamily: "var(--font-sans)", color: "var(--color-text-primary)", padding: "0" }}>
-      <h2 className="sr-only">Brand Files Repository — categorized documents, reports, and evidence files</h2>
+  // Upload handler
+  const handleFiles = (files) => {
+    // Files are managed by App — we just trigger via window event or prop
+    // Since App passes onUpload, we need to wire through. We'll emit a custom trigger here
+    // Note: this requires App.jsx to pass onUpload prop too. See integration note below.
+    if (window.__filesModuleUpload) {
+      Array.from(files).forEach(file => {
+        const type = ["png","jpg","jpeg","gif","webp","svg"].includes(file.name.split(".").pop().toLowerCase()) ? "image"
+          : ["mp4","mov","webm"].includes(file.name.split(".").pop().toLowerCase()) ? "video" : "report";
+        const url = URL.createObjectURL(file);
+        window.__filesModuleUpload({ id: Date.now() + Math.random(), name: file.name, type, url, size: file.size, date: new Date().toLocaleDateString("tr-TR") });
+      });
+    }
+  };
 
-      {/* Header bar */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px", flexWrap: "wrap", gap: "10px" }}>
+  const totalUploads = uploadFiles.length;
+
+  return (
+    <div>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 10 }}>
         <div>
-          <p style={{ fontSize: "18px", fontWeight: 500, margin: 0 }}>Files</p>
-          <p style={{ fontSize: "13px", color: "var(--color-text-secondary)", margin: "2px 0 0" }}>{FILES.length} documents across {BRANDS.length - 1} brands</p>
+          <h2 style={{ fontSize: 22, fontWeight: 700, color: "#F9FAFB", margin: "0 0 4px", letterSpacing: "-0.02em" }}>Files Repository</h2>
+          <p style={{ fontSize: 13, color: "#6B7280", margin: 0 }}>
+            {allFiles.length} documents across {BRAND_LIST.length - 1} brands
+            {totalUploads > 0 && <span style={{ color: "#34D399", marginLeft: 8 }}>· {totalUploads} uploaded</span>}
+          </p>
         </div>
-        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-          <input
-            type="text"
-            placeholder="Search files or tags..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            style={{ width: "200px", fontSize: "13px", padding: "6px 10px", border: "0.5px solid var(--color-border-secondary)", borderRadius: "var(--border-radius-md)", background: "var(--color-background-primary)", color: "var(--color-text-primary)", outline: "none" }}
-          />
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <div style={{ position: "relative" }}>
+            <input
+              type="text"
+              placeholder="Search files or tags…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              style={{
+                width: 200, fontSize: 12, padding: "7px 12px 7px 32px",
+                background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)",
+                borderRadius: 8, color: "#F9FAFB", outline: "none",
+              }}
+            />
+            <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 12, color: "#4B5563" }}>🔍</span>
+          </div>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            style={{ fontSize: 11, color: "#60A5FA", background: "rgba(59,130,246,0.1)", border: "1px solid rgba(59,130,246,0.25)", borderRadius: 7, padding: "7px 14px", cursor: "pointer", fontWeight: 600 }}
+          >+ Upload</button>
+          <input ref={fileInputRef} type="file" multiple style={{ display: "none" }} onChange={e => { handleFiles(e.target.files); e.target.value = ""; }} />
           <button
             onClick={() => setShowJourney(!showJourney)}
-            style={{ fontSize: "12px", padding: "6px 14px", background: showJourney ? "var(--color-background-info)" : undefined, color: showJourney ? "var(--color-text-info)" : undefined }}
-          >
-            {showJourney ? "Hide" : "Show"} solution journey ↗
-          </button>
+            style={{ fontSize: 11, color: showJourney ? "#818CF8" : "#6B7280", background: showJourney ? "rgba(129,140,248,0.1)" : "rgba(255,255,255,0.04)", border: `1px solid ${showJourney ? "rgba(129,140,248,0.3)" : "rgba(255,255,255,0.08)"}`, borderRadius: 7, padding: "7px 14px", cursor: "pointer", fontWeight: showJourney ? 600 : 400 }}
+          >{showJourney ? "Hide" : "Show"} journey ↗</button>
         </div>
       </div>
 
-      {/* Solution Journey Diagram */}
-      {showJourney && (
-        <div style={{ background: "var(--color-background-secondary)", borderRadius: "var(--border-radius-lg)", border: "0.5px solid var(--color-border-tertiary)", padding: "20px", marginBottom: "20px" }}>
-          <p style={{ fontSize: "13px", fontWeight: 500, margin: "0 0 4px" }}>Solution journey</p>
-          <p style={{ fontSize: "12px", color: "var(--color-text-secondary)", margin: "0 0 16px" }}>From raw data to corrective dashboard — methodology chain</p>
-          <div style={{ display: "flex", alignItems: "stretch", gap: "0", overflowX: "auto" }}>
-            {JOURNEY_STEPS.map((step, i) => (
-              <div key={step.id} style={{ display: "flex", alignItems: "center", flex: 1, minWidth: "140px" }}>
-                <div style={{ flex: 1, background: step.bg, border: `0.5px solid ${step.border}`, borderRadius: "var(--border-radius-md)", padding: "12px", minHeight: "120px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "6px" }}>
-                    <span style={{ fontSize: "10px", fontWeight: 500, background: step.color, color: "#fff", padding: "2px 7px", borderRadius: "4px" }}>{step.phase}</span>
-                  </div>
-                  <p style={{ fontSize: "12px", fontWeight: 500, margin: "0 0 8px", color: step.color }}>{step.title}</p>
-                  {step.actions.map((a, ai) => (
-                    <p key={ai} style={{ fontSize: "11px", color: "var(--color-text-secondary)", margin: "2px 0", lineHeight: 1.4 }}>— {a}</p>
-                  ))}
-                </div>
-                {i < JOURNEY_STEPS.length - 1 && (
-                  <div style={{ width: "24px", textAlign: "center", fontSize: "14px", color: "var(--color-text-secondary)", flexShrink: 0 }}>→</div>
-                )}
-              </div>
-            ))}
-          </div>
+      {/* Stats */}
+      <StatsBar allFiles={allFiles} />
+
+      {/* Journey */}
+      {showJourney && <JourneyPanel />}
+
+      {/* Upload drop zone (when no App uploads yet) */}
+      {totalUploads === 0 && (
+        <div
+          onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={e => { e.preventDefault(); setDragOver(false); handleFiles(e.dataTransfer.files); }}
+          onClick={() => fileInputRef.current?.click()}
+          style={{
+            border: `1.5px dashed ${dragOver ? "#60A5FA" : "rgba(255,255,255,0.08)"}`,
+            borderRadius: 10, padding: "16px 20px", textAlign: "center",
+            cursor: "pointer", marginBottom: 20,
+            background: dragOver ? "rgba(59,130,246,0.05)" : "rgba(255,255,255,0.01)",
+            transition: "all 0.15s",
+          }}
+        >
+          <div style={{ fontSize: 20, marginBottom: 4 }}>📎</div>
+          <div style={{ fontSize: 12, color: "#6B7280" }}>Drop reports, presentations, or images here — they'll appear as Draft files</div>
+          <div style={{ fontSize: 11, color: "#374151", marginTop: 3 }}>PDF · PPTX · XLSX · SVG · PNG · MP4 and more</div>
         </div>
       )}
 
       {/* Two-panel layout */}
-      <div style={{ display: "grid", gridTemplateColumns: "180px 1fr", gap: "16px", alignItems: "start" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "180px 1fr", gap: 16, alignItems: "start" }}>
 
-        {/* Left: brand + dept nav */}
-        <div style={{ background: "var(--color-background-secondary)", borderRadius: "var(--border-radius-lg)", border: "0.5px solid var(--color-border-tertiary)", padding: "12px", position: "sticky", top: "16px" }}>
-          <p style={{ fontSize: "11px", fontWeight: 500, color: "var(--color-text-secondary)", margin: "0 0 8px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Brand</p>
-          {BRANDS.map(b => (
-            <button
-              key={b}
-              onClick={() => setActiveBrand(b)}
-              style={{
-                display: "block", width: "100%", textAlign: "left",
-                fontSize: "12px", padding: "5px 8px", marginBottom: "2px",
-                background: activeBrand === b ? "var(--color-background-primary)" : "transparent",
-                border: activeBrand === b ? "0.5px solid var(--color-border-secondary)" : "0.5px solid transparent",
-                borderRadius: "var(--border-radius-md)",
-                color: activeBrand === b ? "var(--color-text-primary)" : "var(--color-text-secondary)",
-                fontWeight: activeBrand === b ? 500 : 400,
-                cursor: "pointer",
-              }}
-            >
-              {b}
-              <span style={{ float: "right", fontSize: "11px", color: "var(--color-text-secondary)" }}>
-              {FILES.filter(f => {
-                const matchBrand = b === "Global" ? f.brand === "Global" : f.brand === b || f.brand === "Global";
-                const matchDept = activeDept === "All" || f.dept === activeDept;
-                return matchBrand && matchDept;
-              }).length}
-              </span>
-            </button>
-          ))}
+        {/* Sidebar */}
+        <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: 12, position: "sticky", top: 0 }}>
+          <p style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", margin: "0 0 8px", textTransform: "uppercase", letterSpacing: "0.08em" }}>Brand</p>
+          {BRAND_LIST.map(b => {
+            const count = b === "All Brands"
+              ? allFiles.length
+              : allFiles.filter(f => f.brand === b || (b !== "Global" && f.brand === "Global")).length;
+            const isActive = activeBrand === b;
+            return (
+              <button key={b} onClick={() => setActiveBrand(b)} style={{
+                display: "flex", justifyContent: "space-between", width: "100%", textAlign: "left",
+                fontSize: 11, padding: "5px 8px", marginBottom: 2,
+                background: isActive ? "rgba(59,130,246,0.12)" : "transparent",
+                border: isActive ? "1px solid rgba(59,130,246,0.3)" : "1px solid transparent",
+                borderRadius: 7, color: isActive ? "#60A5FA" : "#6B7280",
+                fontWeight: isActive ? 700 : 400, cursor: "pointer",
+              }}>
+                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b}</span>
+                <span style={{ fontSize: 10, color: isActive ? "#60A5FA" : "#374151", flexShrink: 0, marginLeft: 4 }}>{count}</span>
+              </button>
+            );
+          })}
 
-          <p style={{ fontSize: "11px", fontWeight: 500, color: "var(--color-text-secondary)", margin: "16px 0 8px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Department</p>
-          {DEPARTMENTS.map(d => (
-            <button
-              key={d}
-              onClick={() => setActiveDept(d)}
-              style={{
-                display: "block", width: "100%", textAlign: "left",
-                fontSize: "12px", padding: "5px 8px", marginBottom: "2px",
-                background: activeDept === d ? "var(--color-background-primary)" : "transparent",
-                border: activeDept === d ? "0.5px solid var(--color-border-secondary)" : "0.5px solid transparent",
-                borderRadius: "var(--border-radius-md)",
-                color: activeDept === d ? "var(--color-text-primary)" : "var(--color-text-secondary)",
-                fontWeight: activeDept === d ? 500 : 400,
-                cursor: "pointer",
-              }}
-            >
-              {d === "All" && <span style={{ marginRight: "4px" }}>◼</span>}
-              {d !== "All" && <span style={{ display: "inline-block", width: "6px", height: "6px", borderRadius: "50%", background: DEPT_COLORS[d]?.border, marginRight: "6px", verticalAlign: "middle" }} />}
-              {d}
-            </button>
-          ))}
+          <p style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", margin: "16px 0 8px", textTransform: "uppercase", letterSpacing: "0.08em" }}>Department</p>
+          {DEPARTMENTS.map(d => {
+            const isActive = activeDept === d;
+            const dc = DEPT_COLORS[d];
+            return (
+              <button key={d} onClick={() => setActiveDept(d)} style={{
+                display: "flex", alignItems: "center", gap: 6, width: "100%", textAlign: "left",
+                fontSize: 11, padding: "5px 8px", marginBottom: 2,
+                background: isActive && d !== "All" ? dc.bg : isActive ? "rgba(255,255,255,0.05)" : "transparent",
+                border: isActive ? `1px solid ${d !== "All" ? dc.border : "rgba(255,255,255,0.15)"}` : "1px solid transparent",
+                borderRadius: 7, color: isActive && d !== "All" ? dc.accent : isActive ? "#D1D5DB" : "#6B7280",
+                fontWeight: isActive ? 700 : 400, cursor: "pointer",
+              }}>
+                {d === "All"
+                  ? <span style={{ fontSize: 8 }}>◼</span>
+                  : <div style={{ width: 6, height: 6, borderRadius: "50%", background: dc.accent, flexShrink: 0 }} />}
+                {d}
+              </button>
+            );
+          })}
         </div>
 
-        {/* Right: file cards */}
+        {/* File grid */}
         <div>
           {filtered.length === 0 && (
-            <div style={{ padding: "40px 0", textAlign: "center", color: "var(--color-text-secondary)", fontSize: "13px" }}>
-              <p style={{ margin: "0 0 8px" }}>No files match this filter.</p>
-              {search && (
-                <button style={{ fontSize: "12px" }} onClick={() => setSearch("")}>Clear search</button>
-              )}
+            <div style={{ padding: "40px 0", textAlign: "center", color: "#4B5563", fontSize: 13 }}>
+              No files match this filter.
+              {search && <span style={{ display: "block", marginTop: 6, fontSize: 11 }}>Try clearing the search or selecting "All" in the sidebar.</span>}
             </div>
           )}
 
           {activeDept === "All"
-            ? DEPARTMENTS.slice(1).map(dept => {
-                const items = grouped[dept];
-                if (!items || items.length === 0) return null;
-                return (
-                  <DeptSection key={dept} dept={dept} items={items} onSelect={setSelectedFile} selectedFile={selectedFile} />
-                );
-              })
-            : <DeptSection dept={activeDept} items={filtered} onSelect={setSelectedFile} selectedFile={selectedFile} />
+            ? DEPARTMENTS.slice(1).map(dept => (
+                <DeptSection key={dept} dept={dept} items={grouped[dept]} selectedFile={selectedFile} onSelect={setSelectedFile} />
+              ))
+            : <DeptSection dept={activeDept} items={filtered} selectedFile={selectedFile} onSelect={setSelectedFile} />
           }
+
+          {/* Detail panel */}
+          {selectedFile && (
+            <FileDetail
+              file={selectedFile}
+              onClose={() => setSelectedFile(null)}
+              onDeleteUpload={onDeleteUpload}
+            />
+          )}
         </div>
       </div>
 
-      {/* File detail panel */}
-      {selectedFile && (
-        <div ref={fileDetailRef}>
-          <FileDetail file={selectedFile} onClose={() => setSelectedFile(null)} />
+      {/* Upload drop zone (when there are uploads, show a smaller one at bottom) */}
+      {totalUploads > 0 && (
+        <div style={{ marginTop: 20 }}>
+          <div
+            onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={e => { e.preventDefault(); setDragOver(false); handleFiles(e.dataTransfer.files); }}
+            onClick={() => fileInputRef.current?.click()}
+            style={{
+              border: `1px dashed ${dragOver ? "#60A5FA" : "rgba(255,255,255,0.07)"}`,
+              borderRadius: 8, padding: "10px", textAlign: "center",
+              cursor: "pointer", fontSize: 11, color: "#4B5563",
+              background: dragOver ? "rgba(59,130,246,0.05)" : "transparent",
+              transition: "all 0.15s",
+            }}
+          >+ Drop more files
+          </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function DeptSection({ dept, items, onSelect, selectedFile }) {
-  const dc = DEPT_COLORS[dept];
-  return (
-    <div style={{ marginBottom: "24px" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
-        <span style={{ display: "inline-block", width: "8px", height: "8px", borderRadius: "50%", background: dc.border }} />
-        <p style={{ fontSize: "13px", fontWeight: 500, margin: 0 }}>{dept}</p>
-        <span style={{ fontSize: "11px", color: "var(--color-text-secondary)" }}>{items.length} files</span>
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: "10px" }}>
-        {items.map(f => (
-          <FileCard key={f.id} file={f} dc={dc} onSelect={onSelect} isSelected={selectedFile?.id === f.id} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function FileCard({ file, dc, onSelect, isSelected }) {
-  const [hovered, setHovered] = useState(false);
-  const sc = STATUS_COLORS[file.status];
-  return (
-    <div
-      onClick={() => onSelect(isSelected ? null : file)}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        background: "var(--color-background-primary)",
-        border: isSelected ? `1.5px solid ${dc.border}` : hovered ? `0.5px solid ${dc.border}` : "0.5px solid var(--color-border-tertiary)",
-        borderRadius: "var(--border-radius-lg)",
-        padding: "12px 14px",
-        cursor: "pointer",
-        transition: "border 0.15s, box-shadow 0.15s",
-        boxShadow: hovered && !isSelected ? `0 0 0 3px ${dc.bg}` : undefined,
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "8px", marginBottom: "6px" }}>
-        <span style={{ fontSize: "18px" }}>{FILE_ICONS[file.ext] || "📎"}</span>
-        <span style={{ fontSize: "10px", padding: "2px 7px", borderRadius: "4px", background: sc.bg, color: sc.text, fontWeight: 500, flexShrink: 0 }}>{file.status}</span>
-      </div>
-      <p style={{ fontSize: "12px", fontWeight: 500, margin: "0 0 4px", lineHeight: 1.4 }}>{file.title}</p>
-      <p style={{ fontSize: "11px", color: "var(--color-text-secondary)", margin: "0 0 8px", lineHeight: 1.5 }}>{file.desc.substring(0, 80)}{file.desc.length > 80 ? "…" : ""}</p>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginBottom: "6px" }}>
-        {file.tags.map(t => (
-          <span key={t} style={{ fontSize: "10px", padding: "1px 6px", background: dc.bg, color: dc.text, border: `0.5px solid ${dc.border}`, borderRadius: "4px" }}>{t}</span>
-        ))}
-      </div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span style={{ fontSize: "10px", color: "var(--color-text-secondary)", fontFamily: "var(--font-mono)" }}>.{file.ext}</span>
-        <span style={{ fontSize: "10px", color: "var(--color-text-secondary)" }}>{file.date}</span>
-      </div>
-    </div>
-  );
-}
-
-function FileDetail({ file, onClose }) {
-  const dc = DEPT_COLORS[file.dept] || {};
-  const sc = STATUS_COLORS[file.status] || {};
-  return (
-    <div style={{ marginTop: "20px", background: "var(--color-background-primary)", border: `1.5px solid ${dc.border || "var(--color-border-primary)"}`, borderRadius: "var(--border-radius-lg)", padding: "20px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
-        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-          <span style={{ fontSize: "28px" }}>{FILE_ICONS[file.ext] || "📎"}</span>
-          <div>
-            <p style={{ fontSize: "15px", fontWeight: 500, margin: 0 }}>{file.title}</p>
-            <p style={{ fontSize: "12px", color: "var(--color-text-secondary)", margin: "2px 0 0" }}>{file.brand} · {file.dept} · {file.date}</p>
-          </div>
-        </div>
-        <button onClick={onClose} style={{ fontSize: "12px", padding: "4px 10px" }}>Close</button>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "16px" }}>
-        <div style={{ background: "var(--color-background-secondary)", borderRadius: "var(--border-radius-md)", padding: "12px" }}>
-          <p style={{ fontSize: "11px", fontWeight: 500, color: "var(--color-text-secondary)", margin: "0 0 4px" }}>Description</p>
-          <p style={{ fontSize: "13px", margin: 0, lineHeight: 1.6 }}>{file.desc}</p>
-        </div>
-        <div style={{ background: "var(--color-background-secondary)", borderRadius: "var(--border-radius-md)", padding: "12px" }}>
-          <p style={{ fontSize: "11px", fontWeight: 500, color: "var(--color-text-secondary)", margin: "0 0 8px" }}>Metadata</p>
-          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-            <MetaRow label="Department" value={<span style={{ fontSize: "11px", padding: "2px 7px", background: dc.bg, color: dc.text, borderRadius: "4px" }}>{file.dept}</span>} />
-            <MetaRow label="Status" value={<span style={{ fontSize: "11px", padding: "2px 7px", background: sc.bg, color: sc.text, borderRadius: "4px" }}>{file.status}</span>} />
-            <MetaRow label="Brand" value={file.brand} />
-            <MetaRow label="Format" value={<span style={{ fontFamily: "var(--font-mono)", fontSize: "12px" }}>.{file.ext}</span>} />
-          </div>
-        </div>
-      </div>
-
-      <div style={{ marginBottom: "12px" }}>
-        <p style={{ fontSize: "11px", fontWeight: 500, color: "var(--color-text-secondary)", margin: "0 0 6px" }}>Tags</p>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "5px" }}>
-          {file.tags.map(t => (
-            <span key={t} style={{ fontSize: "11px", padding: "2px 8px", background: dc.bg, color: dc.text, border: `0.5px solid ${dc.border}`, borderRadius: "4px" }}>{t}</span>
-          ))}
-        </div>
-      </div>
-
-      <div style={{ display: "flex", gap: "8px" }}>
-        <button style={{ fontSize: "12px" }}>Download .{file.ext}</button>
-        <button style={{ fontSize: "12px" }}>Share link</button>
-        <button style={{ fontSize: "12px" }}>Open in viewer</button>
-      </div>
-    </div>
-  );
-}
-
-function MetaRow({ label, value }) {
-  return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "12px" }}>
-      <span style={{ color: "var(--color-text-secondary)" }}>{label}</span>
-      <span>{value}</span>
     </div>
   );
 }
